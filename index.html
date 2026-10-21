@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Petualangan Susun Huruf - SDIT Az-Zahra</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background-color: #d1fae5; /* Tailwind green-100 */
+            background-image: radial-gradient(#a7f3d0 2px, transparent 2px);
+            background-size: 30px 30px;
+            touch-action: manipulation; /* Mencegah zoom saat double tap di HP */
+        }
+        
+        .btn-bounce {
+            transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-bounce:active {
+            transform: scale(0.95);
+        }
+        
+        .letter-box {
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 0 #166534; /* green-800 */
+        }
+        .letter-box:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #166534;
+        }
+        
+        .letter-slot {
+            border: 3px dashed #9ca3af;
+            background-color: #f3f4f6;
+        }
+        
+        .animate-pop {
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-5deg); }
+            75% { transform: rotate(5deg); }
+        }
+        
+        .animate-wiggle {
+            animation: wiggle 0.5s ease-in-out;
+        }
+
+        #confetti-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+        }
+        
+        .hide { display: none !important; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <canvas id="confetti-canvas"></canvas>
+    
+    <div id="app-container" class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden border-4 border-green-400 relative">
+        
+        <!-- Header Global -->
+        <div class="bg-green-500 text-white p-3 text-center rounded-t-2xl border-b-4 border-green-600 flex justify-between items-center px-4">
+            <div class="flex items-center gap-2 font-bold">
+                <i class="fa-solid fa-school"></i> SDIT Az-Zahra - Kelas 1B
+            </div>
+            <div class="flex gap-3">
+                <button id="btn-home" class="text-white hover:text-yellow-200 text-xl btn-bounce hide" title="Kembali ke Menu">
+                    <i class="fa-solid fa-house"></i>
+                </button>
+                <button id="btn-sound-toggle" class="text-white hover:text-yellow-200 text-xl btn-bounce">
+                    <i class="fa-solid fa-volume-up"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- SCREEN 1: HALAMAN PEMBUKA -->
+        <div id="screen-start" class="p-8 flex flex-col items-center justify-center text-center">
+            <div class="text-6xl mb-4 animate-wiggle">👦👧</div>
+            <h1 class="text-4xl md:text-5xl font-bold text-green-700 mb-2 drop-shadow-sm">PETUALANGAN<br>SUSUN HURUF</h1>
+            <p class="text-lg text-gray-600 mb-6 font-semibold">Mari belajar menyusun dan mengeja kata!</p>
+            
+            <div class="w-full max-w-sm bg-green-50 p-6 rounded-2xl border-2 border-green-200 mb-6 shadow-inner">
+                <label for="student-name" class="block text-left font-bold text-green-800 mb-2">Nama Siswa:</label>
+                <input type="text" id="student-name" placeholder="Tulis namamu di sini..." class="w-full p-4 text-xl rounded-xl border-2 border-green-300 focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-200 mb-4 text-center font-bold text-gray-700">
+                
+                <label for="student-class" class="block text-left font-bold text-green-800 mb-2">Kelas:</label>
+                <select id="student-class" disabled class="w-full p-4 text-xl rounded-xl border-2 border-green-300 bg-gray-100 text-center font-bold text-gray-700 opacity-80 cursor-not-allowed">
+                    <option value="1B" selected>Kelas 1B</option>
+                </select>
+                <p id="name-error" class="text-red-500 font-bold mt-3 hide animate-pop">Namamu belum diisi, ya! 😊</p>
+            </div>
+            
+            <button id="btn-start" class="btn-bounce bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-bold text-2xl py-4 px-10 rounded-full shadow-[0_6px_0_#b45309] w-full max-w-sm flex items-center justify-center gap-3">
+                <i class="fa-solid fa-play"></i> MULAI BERMAIN
+            </button>
+            
+            <div class="mt-8 text-sm text-gray-500 bg-gray-50 p-4 rounded-xl max-w-lg mx-auto">
+                <p class="font-bold text-gray-700 mb-1">Petunjuk Bermain:</p>
+                <p>1. Lihat gambarnya dengan teliti.</p>
+                <p>2. Tekan huruf yang diacak untuk menyusun kata.</p>
+                <p>3. Tekan "Periksa Jawaban" untuk melihat hasilnya!</p>
+            </div>
+        </div>
+
+        <!-- SCREEN 2: AREA BERMAIN -->
+        <div id="screen-game" class="p-6 md:p-8 flex flex-col items-center justify-center text-center hide">
+            <!-- Game Header Info -->
+            <div class="w-full flex justify-between items-center mb-4">
+                <div class="bg-blue-100 text-blue-800 px-4 py-2 rounded-full font-bold shadow-sm border-2 border-blue-200 flex items-center gap-2">
+                    <i class="fa-solid fa-layer-group"></i> <span id="level-display">Level 1: Pemula Hebat</span>
+                </div>
+                <div class="bg-purple-100 text-purple-800 px-4 py-2 rounded-full font-bold shadow-sm border-2 border-purple-200 flex items-center gap-2">
+                    <i class="fa-solid fa-star"></i> <span id="question-display">Soal 1 / 10</span>
+                </div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-200 rounded-full h-4 mb-6 border border-gray-300 overflow-hidden">
+                <div id="progress-bar" class="bg-green-500 h-4 rounded-full transition-all duration-500" style="width: 10%"></div>
+            </div>
+
+            <!-- Hint Image/Emoji -->
+            <div class="bg-yellow-50 w-40 h-40 md:w-48 md:h-48 rounded-3xl border-4 border-yellow-300 shadow-inner flex items-center justify-center mb-6 relative">
+                <span id="game-image" class="text-7xl md:text-8xl animate-pop">🍎</span>
+                <!-- Hint Button -->
+                <button id="btn-hint" class="absolute -top-3 -right-3 bg-blue-500 text-white w-10 h-10 rounded-full font-bold border-2 border-white shadow-lg btn-bounce flex items-center justify-center" title="Petunjuk">
+                    <i class="fa-solid fa-lightbulb text-yellow-200"></i>
+                </button>
+            </div>
+
+            <!-- Message Area -->
+            <div id="game-message" class="h-10 text-xl font-bold mb-2 transition-all duration-300"></div>
+
+            <!-- Answer Slots -->
+            <div id="answer-slots" class="flex flex-wrap justify-center gap-2 md:gap-3 mb-8 min-h-[4rem]">
+                <!-- Dibuat secara dinamis dengan JS -->
+            </div>
+
+            <!-- Scrambled Letters -->
+            <div class="w-full bg-green-50 p-4 rounded-2xl border-2 border-green-200 shadow-inner mb-6">
+                <p class="text-green-800 font-bold mb-3">Pilih huruf di bawah ini:</p>
+                <div id="scrambled-letters" class="flex flex-wrap justify-center gap-2 md:gap-4">
+                    <!-- Dibuat secara dinamis dengan JS -->
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap gap-3 justify-center w-full max-w-md">
+                <button id="btn-reset" class="btn-bounce flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-4 rounded-xl shadow-[0_4px_0_#9ca3af]">
+                    <i class="fa-solid fa-rotate-left mr-2"></i> Ulangi
+                </button>
+                <button id="btn-check" class="btn-bounce flex-[2] bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl shadow-[0_4px_0_#166534] text-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-check-circle mr-2"></i> Periksa Jawaban
+                </button>
+            </div>
+        </div>
+
+        <!-- SCREEN 3: AREA MENGEJA (SPELLING) -->
+        <div id="screen-spelling" class="p-8 flex flex-col items-center justify-center text-center hide animate-pop">
+            <div class="text-6xl text-yellow-400 mb-4 animate-wiggle"><i class="fa-solid fa-award"></i></div>
+            <h2 class="text-3xl font-bold text-green-700 mb-2">Hebat! Jawabanmu Benar!</h2>
+            <p class="text-gray-600 font-semibold mb-8">Ayo kita belajar mengeja kata ini.</p>
+            
+            <div class="bg-blue-50 border-4 border-blue-300 rounded-3xl p-8 w-full max-w-sm mb-8 shadow-lg">
+                <div id="spelling-emoji" class="text-6xl mb-4">🍎</div>
+                <div id="spelling-word" class="text-4xl font-extrabold text-blue-900 mb-2 tracking-widest uppercase">BOLA</div>
+                <div id="spelling-syllables" class="text-3xl font-bold text-red-500 mb-6 bg-white py-2 px-4 rounded-xl inline-block border-2 border-red-200">BO - LA</div>
+                
+                <button id="btn-listen" class="btn-bounce bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-8 rounded-full shadow-[0_5px_0_#1e3a8a] text-xl w-full flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-volume-high"></i> Dengarkan Ejaan
+                </button>
+            </div>
+            
+            <button id="btn-next" class="btn-bounce bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-full shadow-[0_5px_0_#166534] text-xl w-full max-w-sm flex items-center justify-center gap-3">
+                Lanjut ke Soal Berikutnya <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+
+        <!-- SCREEN 4: HASIL AKHIR -->
+        <div id="screen-result" class="p-8 flex flex-col items-center justify-center text-center hide animate-pop">
+            <div class="text-6xl mb-2">🏆</div>
+            <h1 class="text-4xl font-bold text-green-700 mb-1">Permainan Selesai!</h1>
+            <p id="result-message" class="text-xl font-bold text-blue-600 mb-6">Luar biasa! Kamu sudah menyelesaikan semua level!</p>
+            
+            <div class="w-full bg-yellow-50 p-6 rounded-2xl border-2 border-yellow-300 shadow-inner mb-6 text-left text-lg space-y-3">
+                <div class="border-b-2 border-yellow-200 pb-2 flex justify-between">
+                    <span class="font-bold text-gray-700">Nama Siswa:</span>
+                    <span id="res-name" class="font-bold text-green-800">Budi</span>
+                </div>
+                <div class="border-b-2 border-yellow-200 pb-2 flex justify-between">
+                    <span class="font-bold text-gray-700">Level 1 (Mudah):</span>
+                    <span id="res-level1" class="font-bold text-blue-700">0 / 100</span>
+                </div>
+                <div class="border-b-2 border-yellow-200 pb-2 flex justify-between">
+                    <span class="font-bold text-gray-700">Level 2 (Sedang):</span>
+                    <span id="res-level2" class="font-bold text-blue-700">0 / 100</span>
+                </div>
+                <div class="border-b-2 border-yellow-200 pb-2 flex justify-between">
+                    <span class="font-bold text-gray-700">Level 3 (Sulit):</span>
+                    <span id="res-level3" class="font-bold text-blue-700">0 / 100</span>
+                </div>
+                <div class="flex justify-between items-center pt-2 mt-2 bg-green-100 p-3 rounded-xl border border-green-300">
+                    <span class="font-extrabold text-green-900 text-xl">NILAI AKHIR:</span>
+                    <span id="res-total" class="font-extrabold text-red-600 text-3xl">100</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-4 w-full max-w-sm">
+                <button id="btn-whatsapp" class="btn-bounce bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-2xl shadow-[0_5px_0_#166534] text-lg flex items-center justify-center gap-3">
+                    <i class="fa-brands fa-whatsapp text-2xl"></i> Kirim Nilai ke Guru via WhatsApp
+                </button>
+                <button id="btn-restart" class="btn-bounce bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-6 rounded-2xl shadow-[0_4px_0_#9ca3af] text-lg flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> Main Lagi
+                </button>
+            </div>
+            
+            <p class="mt-4 text-xs text-gray-400">Jika tombol WhatsApp tidak berfungsi, kamu bisa screenshot halaman ini dan kirimkan ke Bu Guru.</p>
+        </div>
+
+    </div>
+
+    <script>
+        // --- DATA SOAL PERMAINAN ---
+        // Menggunakan Emoji sebagai ilustrasi yang ramah anak dan pasti dimuat tanpa masalah URL gambar.
+        const GAME_DATA = {
+            1: [ // Level 1: 3-4 huruf (10 Soal)
+                { word: 'API', syllables: 'A-PI', emoji: '🔥' },
+                { word: 'TAS', syllables: 'TAS', emoji: '🎒' },
+                { word: 'BUKU', syllables: 'BU-KU', emoji: '📖' },
+                { word: 'BOLA', syllables: 'BO-LA', emoji: '⚽' },
+                { word: 'MEJA', syllables: 'ME-JA', emoji: '🪑' },
+                { word: 'TOPI', syllables: 'TO-PI', emoji: '🧢' },
+                { word: 'BAJU', syllables: 'BA-JU', emoji: '👕' },
+                { word: 'GIGI', syllables: 'GI-GI', emoji: '🦷' },
+                { word: 'MATA', syllables: 'MA-TA', emoji: '👁️' },
+                { word: 'ROTI', syllables: 'RO-TI', emoji: '🍞' }
+            ],
+            2: [ // Level 2: 5-7 huruf (10 Soal)
+                { word: 'PISANG', syllables: 'PI-SANG', emoji: '🍌' },
+                { word: 'KELAPA', syllables: 'KE-LA-PA', emoji: '🥥' },
+                { word: 'BURUNG', syllables: 'BU-RUNG', emoji: '🐦' },
+                { word: 'PENSIL', syllables: 'PEN-SIL', emoji: '✏️' },
+                { word: 'KUCING', syllables: 'KU-CING', emoji: '🐈' },
+                { word: 'RUMAH', syllables: 'RU-MAH', emoji: '🏠' },
+                { word: 'POHON', syllables: 'PO-HON', emoji: '🌳' },
+                { word: 'SEPEDA', syllables: 'SE-PE-DA', emoji: '🚲' },
+                { word: 'BUNGA', syllables: 'BU-NGA', emoji: '🌸' },
+                { word: 'LEMARI', syllables: 'LE-MA-RI', emoji: '🚪' }
+            ],
+            3: [ // Level 3: >7 huruf (10 Soal)
+                { word: 'MATAHARI', syllables: 'MA-TA-HA-RI', emoji: '☀️' },
+                { word: 'KENDARAAN', syllables: 'KEN-DA-RA-AN', emoji: '🚗' },
+                { word: 'SEKOLAH', syllables: 'SE-KO-LAH', emoji: '🏫' },
+                { word: 'PELANGI', syllables: 'PE-LA-NGI', emoji: '🌈' },
+                { word: 'KELUARGA', syllables: 'KE-LU-AR-GA', emoji: '👨‍👩‍👧‍👦' },
+                { word: 'KACAMATA', syllables: 'KA-CA-MA-TA', emoji: '👓' },
+                { word: 'TELEVISI', syllables: 'TE-LE-VI-SI', emoji: '📺' },
+                { word: 'HELIKOPTER', syllables: 'HE-LI-KOP-TER', emoji: '🚁' },
+                { word: 'SEMANGKA', syllables: 'SE-MANG-KA', emoji: '🍉' },
+                { word: 'KOMPUTER', syllables: 'KOM-PU-TER', emoji: '💻' }
+            ]
+        };
+
+        // --- STATE VARIABLES ---
+        let gameState = {
+            studentName: '',
+            currentLevel: 1,
+            currentQuestionIdx: 0,
+            scores: { 1: 0, 2: 0, 3: 0 },
+            stats: { correct: 0, wrong: 0, hints: 0 },
+            startTime: null,
+            endTime: null,
+            soundEnabled: true,
+            
+            // State untuk soal saat ini
+            currentWord: '',
+            currentEmoji: '',
+            currentSyllables: '',
+            originalScrambledLetters: [],
+            availableLetters: [], // [{ id: 0, char: 'A' }]
+            selectedLetters: [],  // [{ id: 0, char: 'A', slotIdx: 0 }]
+            hasUsedHintOnCurrentQuestion: false,
+            questionCompleted: false
+        };
+
+        function saveGame() {
+            localStorage.setItem('azZahraGameState', JSON.stringify(gameState));
+        }
+
+        function loadGame() {
+            const saved = localStorage.getItem('azZahraGameState');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    // Jangan load jika sudah selesai
+                    if (parsed.endTime) return false;
+                    
+                    gameState = parsed;
+                    if (gameState.startTime) gameState.startTime = new Date(gameState.startTime);
+                    
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        function clearSavedGame() {
+            localStorage.removeItem('azZahraGameState');
+        }
+
+        // --- DOM ELEMENTS ---
+        const screens = {
+            start: document.getElementById('screen-start'),
+            game: document.getElementById('screen-game'),
+            spelling: document.getElementById('screen-spelling'),
+            result: document.getElementById('screen-result')
+        };
+
+        
+        // Audio Synthesizer untuk Text-to-Speech
+        const synth = window.speechSynthesis;
+        
+        // Helper: Tampilkan layar tertentu
+        function showScreen(screenName) {
+            Object.values(screens).forEach(s => s.classList.add('hide'));
+            screens[screenName].classList.remove('hide');
+            
+            const btnHome = document.getElementById('btn-home');
+            if (screenName === 'game' || screenName === 'spelling') {
+                btnHome.classList.remove('hide');
+            } else {
+                btnHome.classList.add('hide');
+            }
+        }
+
+        // Helper: Acak Array (Fisher-Yates Shuffle)
+        function shuffleArray(array) {
+            let curId = array.length;
+            while (0 !== curId) {
+                let randId = Math.floor(Math.random() * curId);
+                curId -= 1;
+                let tmp = array[curId];
+                array[curId] = array[randId];
+                array[randId] = tmp;
+            }
+            return array;
+        }
+
+        // Fitur Text-to-Speech Bahasa Indonesia
+        function speak(text) {
+            if (!gameState.soundEnabled) return;
+            if (synth.speaking) synth.cancel();
+            
+            const utterThis = new SpeechSynthesisUtterance(text);
+            utterThis.lang = 'id-ID';
+            utterThis.rate = 0.85; // Sedikit lebih lambat agar mudah didengar anak
+            synth.speak(utterThis);
+        }
+
+        // Sound Effects Dasar (menggunakan Web Audio API untuk menghindari loading file eksternal)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTone(frequency, type, duration) {
+            if (!gameState.soundEnabled) return;
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.type = type;
+            oscillator.frequency.value = frequency;
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+            gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+            oscillator.stop(audioCtx.currentTime + duration);
+        }
+
+        function playCorrectSound() { playTone(600, 'sine', 0.1); setTimeout(() => playTone(800, 'sine', 0.2), 100); }
+        function playWrongSound() { playTone(300, 'sawtooth', 0.3); }
+        function playClickSound() { playTone(400, 'sine', 0.05); }
+
+        // Sederhana JS Confetti
+        const canvas = document.getElementById('confetti-canvas');
+        const ctx = canvas.getContext('2d');
+        let confettis = [];
+        let confettiAnimationId = null;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function createConfetti() {
+            for (let i = 0; i < 100; i++) {
+                confettis.push({
+                    x: canvas.width / 2,
+                    y: canvas.height / 2 + 50,
+                    vx: (Math.random() - 0.5) * 20,
+                    vy: (Math.random() - 1) * 20 - 5,
+                    size: Math.random() * 10 + 5,
+                    color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+                    rotation: Math.random() * 360,
+                    rs: (Math.random() - 0.5) * 10
+                });
+            }
+        }
+
+        function renderConfetti() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let active = false;
+            confettis.forEach(c => {
+                c.x += c.vx;
+                c.y += c.vy;
+                c.vy += 0.5; // gravity
+                c.rotation += c.rs;
+                if (c.y < canvas.height) active = true;
+                
+                ctx.save();
+                ctx.translate(c.x, c.y);
+                ctx.rotate(c.rotation * Math.PI / 180);
+                ctx.fillStyle = c.color;
+                ctx.fillRect(-c.size/2, -c.size/2, c.size, c.size);
+                ctx.restore();
+            });
+            
+            if (active) {
+                confettiAnimationId = requestAnimationFrame(renderConfetti);
+            } else {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                confettis = [];
+            }
+        }
+
+        function triggerConfetti() {
+            if(confettiAnimationId) cancelAnimationFrame(confettiAnimationId);
+            confettis = [];
+            createConfetti();
+            renderConfetti();
+        }
+
+        
+        // --- LOGIKA GAME ---
+        function startGame() {
+            const nameInput = document.getElementById('student-name').value.trim();
+            if (!nameInput) {
+                document.getElementById('name-error').classList.remove('hide');
+                return;
+            }
+            
+            // Coba resume jika nama yang dimasukkan sama dengan data tersimpan
+            const canResume = loadGame();
+            if (canResume && gameState.studentName.toLowerCase() === nameInput.toLowerCase()) {
+                // Lanjutkan otomatis
+                loadQuestion(true);
+                showScreen('game');
+                playClickSound();
+                return;
+            }
+            
+            gameState = {
+                ...gameState,
+                studentName: nameInput,
+                currentLevel: 1,
+                currentQuestionIdx: 0,
+                scores: { 1: 0, 2: 0, 3: 0 },
+                stats: { correct: 0, wrong: 0, hints: 0 },
+                startTime: new Date(),
+                endTime: null
+            };
+            
+            // Acak semua soal di setiap level agar tidak selalu sama urutannya
+            for (let i = 1; i <= 3; i++) {
+                GAME_DATA[i] = shuffleArray([...GAME_DATA[i]]);
+            }
+            
+            loadQuestion();
+            showScreen('game');
+            playClickSound();
+            saveGame();
+        }
+
+        function loadQuestion(isResume = false) {
+            const levelData = GAME_DATA[gameState.currentLevel];
+            const qData = levelData[gameState.currentQuestionIdx];
+            
+            if (!isResume) {
+                gameState.currentWord = qData.word;
+                gameState.currentEmoji = qData.emoji;
+                gameState.currentSyllables = qData.syllables;
+                gameState.hasUsedHintOnCurrentQuestion = false;
+                gameState.questionCompleted = false;
+                
+                // Mempersiapkan huruf acak
+                let chars = qData.word.split('');
+                // Acak urutan huruf
+                chars = shuffleArray(chars);
+                
+                // Buat objek huruf dengan ID unik agar huruf kembar bisa dibedakan
+                gameState.originalScrambledLetters = chars.map((char, index) => ({ id: index, char: char }));
+                gameState.availableLetters = [...gameState.originalScrambledLetters];
+                gameState.selectedLetters = new Array(qData.word.length).fill(null);
+                
+                saveGame();
+            }
+            
+            updateGameUI();
+            
+            // Reset Pesan
+            const msgEl = document.getElementById('game-message');
+            msgEl.textContent = '';
+            msgEl.className = 'h-10 text-xl font-bold mb-2 transition-all duration-300';
+            
+            // Update Info Header
+            const levelTitles = {1: 'Pemula Hebat', 2: 'Jago Susun Kata', 3: 'Master Susun Huruf'};
+            document.getElementById('level-display').innerText = `Level ${gameState.currentLevel}: ${levelTitles[gameState.currentLevel]}`;
+            document.getElementById('question-display').innerText = `Soal ${gameState.currentQuestionIdx + 1} / 10`;
+            
+            // Update Progress Bar (Total 30 soal)
+            const totalQuestionsAnswered = ((gameState.currentLevel - 1) * 10) + gameState.currentQuestionIdx;
+            const progressPercent = (totalQuestionsAnswered / 30) * 100;
+            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+            
+            // Animate In
+            document.getElementById('game-image').classList.remove('animate-pop');
+            void document.getElementById('game-image').offsetWidth; // trigger reflow
+            document.getElementById('game-image').classList.add('animate-pop');
+        }
+
+        function updateGameUI() {
+            // Gambar/Emoji
+            document.getElementById('game-image').innerText = gameState.currentEmoji;
+            
+            // Render Slots Jawaban
+            const slotsContainer = document.getElementById('answer-slots');
+            slotsContainer.innerHTML = '';
+            
+            gameState.selectedLetters.forEach((item, index) => {
+                const slot = document.createElement('div');
+                slot.className = 'w-12 h-12 md:w-14 md:h-14 flex items-center justify-center text-2xl md:text-3xl font-extrabold rounded-xl cursor-pointer select-none';
+                
+                if (item !== null) {
+                    slot.classList.add('bg-yellow-400', 'text-yellow-900', 'border-2', 'border-yellow-500', 'shadow-[0_4px_0_#b45309]', 'letter-box', 'animate-pop');
+                    slot.innerText = item.char;
+                    slot.onclick = () => { playClickSound(); deselectLetter(index); };
+                } else {
+                    slot.classList.add('letter-slot');
+                }
+                slotsContainer.appendChild(slot);
+            });
+            
+            // Render Huruf Acak
+            const lettersContainer = document.getElementById('scrambled-letters');
+            lettersContainer.innerHTML = '';
+            
+            gameState.availableLetters.forEach((item) => {
+                const btn = document.createElement('button');
+                btn.className = 'w-12 h-12 md:w-14 md:h-14 bg-white text-green-700 font-extrabold text-2xl md:text-3xl rounded-xl border-2 border-green-300 shadow-[0_4px_0_#86efac] flex items-center justify-center letter-box hover:bg-green-50 select-none';
+                btn.innerText = item.char;
+                btn.onclick = () => { playClickSound(); selectLetter(item); };
+                lettersContainer.appendChild(btn);
+            });
+            
+            // Status tombol periksa
+            const isFull = gameState.selectedLetters.every(l => l !== null);
+            document.getElementById('btn-check').disabled = !isFull;
+        }
+
+
+        function selectLetter(item) {
+            // Cari slot kosong pertama
+            const emptyIdx = gameState.selectedLetters.indexOf(null);
+            if (emptyIdx !== -1) {
+                // Pindahkan dari available ke selected
+                gameState.selectedLetters[emptyIdx] = item;
+                gameState.availableLetters = gameState.availableLetters.filter(l => l.id !== item.id);
+                updateGameUI();
+                saveGame();
+            }
+        }
+
+        function deselectLetter(slotIndex) {
+            const item = gameState.selectedLetters[slotIndex];
+            if (item !== null) {
+                // Pindahkan kembali ke available
+                gameState.availableLetters.push(item);
+                gameState.selectedLetters[slotIndex] = null;
+                updateGameUI();
+                saveGame();
+            }
+        }
+
+        function resetLetters() {
+            playClickSound();
+            gameState.availableLetters = [...gameState.originalScrambledLetters];
+            gameState.selectedLetters = new Array(gameState.currentWord.length).fill(null);
+            updateGameUI();
+            
+            const msgEl = document.getElementById('game-message');
+            msgEl.textContent = '';
+            saveGame();
+        }
+
+        function useHint() {
+            playClickSound();
+            gameState.hasUsedHintOnCurrentQuestion = true;
+            gameState.stats.hints++;
+            
+            // Cari huruf yang belum terisi dengan benar atau kosong
+            const targetWord = gameState.currentWord;
+            
+            for (let i = 0; i < targetWord.length; i++) {
+                const expectedChar = targetWord[i];
+                const currentItem = gameState.selectedLetters[i];
+                
+                // Jika slot ini kosong atau salah huruf
+                if (currentItem === null || currentItem.char !== expectedChar) {
+                    
+                    // Jika ada huruf salah di slot ini, kembalikan dulu
+                    if (currentItem !== null) {
+                        gameState.availableLetters.push(currentItem);
+                        gameState.selectedLetters[i] = null;
+                    }
+                    
+                    // Cari huruf yang benar di available
+                    const correctItemIdx = gameState.availableLetters.findIndex(l => l.char === expectedChar);
+                    
+                    if (correctItemIdx !== -1) {
+                        const itemToPlace = gameState.availableLetters[correctItemIdx];
+                        gameState.availableLetters.splice(correctItemIdx, 1);
+                        gameState.selectedLetters[i] = itemToPlace;
+                    } else {
+                        // Jika huruf benar tidak ada di available, berarti user sudah meletakkannya di slot salah yang lain.
+                        // Cari di selectedLetters (yang posisinya salah), lalu swap.
+                        const wronglyPlacedIdx = gameState.selectedLetters.findIndex((l, idx) => l !== null && l.char === expectedChar && targetWord[idx] !== expectedChar);
+                        if (wronglyPlacedIdx !== -1) {
+                            const itemToPlace = gameState.selectedLetters[wronglyPlacedIdx];
+                            gameState.selectedLetters[wronglyPlacedIdx] = null;
+                            gameState.selectedLetters[i] = itemToPlace;
+                        }
+                    }
+                    updateGameUI();
+                    saveGame();
+                    break; // Cukup 1 huruf petunjuk setiap klik
+                }
+            }
+        }
+
+
+        function checkAnswer() {
+            // Pastikan semua slot penuh
+            if (gameState.selectedLetters.some(l => l === null)) return;
+            
+            const userWord = gameState.selectedLetters.map(l => l.char).join('');
+            const msgEl = document.getElementById('game-message');
+            
+            if (userWord === gameState.currentWord) {
+                // BENAR
+                playCorrectSound();
+                triggerConfetti();
+                
+                // Hitung skor hanya jika belum pernah diselesaikan
+                if (!gameState.questionCompleted) {
+                    gameState.stats.correct++;
+                    gameState.scores[gameState.currentLevel] += 10; // 10 soal x 10 poin = 100 poin per level
+                    gameState.questionCompleted = true;
+                }
+                
+                msgEl.textContent = "Hebat! Jawabanmu benar! 🌟";
+                msgEl.className = 'h-10 text-xl font-bold mb-2 transition-all duration-300 text-green-600 animate-pop';
+                
+                saveGame();
+                
+                // Lanjut ke ejaan setelah delay sebentar
+                setTimeout(() => {
+                    prepareSpellingScreen();
+                    showScreen('spelling');
+                }, 1500);
+                
+            } else {
+                // SALAH
+                playWrongSound();
+                msgEl.textContent = "Ayo coba lagi! Kamu pasti bisa! 💪";
+                msgEl.className = 'h-10 text-xl font-bold mb-2 transition-all duration-300 text-red-500 animate-wiggle';
+                
+                if (!gameState.questionCompleted) {
+                    // Catat salah hanya jika belum benar
+                    gameState.stats.wrong++;
+                }
+                saveGame();
+            }
+        }
+
+        function prepareSpellingScreen() {
+            document.getElementById('spelling-emoji').innerText = gameState.currentEmoji;
+            document.getElementById('spelling-word').innerText = gameState.currentWord;
+            document.getElementById('spelling-syllables').innerText = gameState.currentSyllables;
+            
+            // Otomatis bunyikan kata setelah animasi muncul
+            setTimeout(() => {
+                speak(gameState.currentWord);
+            }, 500);
+        }
+
+
+        function nextQuestion() {
+            playClickSound();
+            if(synth.speaking) synth.cancel(); // Hentikan audio jika masih berjalan
+            
+            gameState.currentQuestionIdx++;
+            
+            if (gameState.currentQuestionIdx >= 10) { // Cek 10 soal
+                // Level Selesai
+                gameState.currentLevel++;
+                gameState.currentQuestionIdx = 0;
+                
+                if (gameState.currentLevel > 3) {
+                    // Semua Level Selesai
+                    showFinalResult();
+                } else {
+                    // Lanjut Level Berikutnya
+                    loadQuestion();
+                    showScreen('game');
+                }
+            } else {
+                // Soal berikutnya di level yang sama
+                loadQuestion();
+                showScreen('game');
+            }
+            saveGame();
+        }
+
+        function showFinalResult() {
+            gameState.endTime = new Date();
+            clearSavedGame();
+            
+            document.getElementById('res-name').innerText = gameState.studentName;
+            document.getElementById('res-level1').innerText = `${gameState.scores[1]} / 100`;
+            document.getElementById('res-level2').innerText = `${gameState.scores[2]} / 100`;
+            document.getElementById('res-level3').innerText = `${gameState.scores[3]} / 100`;
+            
+            const totalScoreRaw = (gameState.stats.correct / 30) * 100; // Berdasarkan 30 soal
+            const finalScore = Math.round(totalScoreRaw);
+            document.getElementById('res-total').innerText = finalScore;
+            
+            const msgEl = document.getElementById('result-message');
+            if (finalScore >= 90) {
+                msgEl.innerText = "Luar biasa! Kamu sudah menyelesaikan semua level! 🏆";
+            } else if (finalScore >= 70) {
+                msgEl.innerText = "Bagus! Terus berlatih agar semakin lancar membaca! 🌟";
+            } else {
+                msgEl.innerText = "Hebat! Kamu sudah berusaha dengan baik! Semangat terus belajarnya! 💪";
+            }
+            
+            triggerConfetti();
+            setTimeout(triggerConfetti, 1000);
+            
+            showScreen('result');
+        }
+
+
+        function sendToWhatsApp() {
+            playClickSound();
+            
+            const durationMs = gameState.endTime - gameState.startTime;
+            const mins = Math.floor(durationMs / 60000);
+            const secs = ((durationMs % 60000) / 1000).toFixed(0);
+            const timeStr = mins > 0 ? `${mins} menit ${secs} detik` : `${secs} detik`;
+            
+            const finalScore = Math.round((gameState.stats.correct / 30) * 100);
+            
+            const text = `LAPORAN HASIL GAME EDUKASI BAHASA INDONESIA
+SDIT Az-Zahra
+Kelas: 1B
+Nama Siswa: ${gameState.studentName}
+Materi: Menyusun Huruf dan Mengeja Kata
+
+Level 1 — Mudah: ${gameState.scores[1]} / 100
+Level 2 — Sedang: ${gameState.scores[2]} / 100
+Level 3 — Sulit: ${gameState.scores[3]} / 100
+
+Jumlah Jawaban Benar: ${gameState.stats.correct}
+Jumlah Jawaban Salah: ${gameState.stats.wrong}
+Nilai Akhir: ${finalScore}
+Waktu Pengerjaan: ${timeStr}
+
+Game: Petualangan Susun Huruf
+Laporan ini dibuat otomatis oleh game edukasi Bahasa Indonesia kelas 1B SDIT Az-Zahra.`;
+
+            const encodedText = encodeURIComponent(text);
+            const waNumber = '6281349582525';
+            const waUrl = `https://wa.me/${waNumber}?text=${encodedText}`;
+            
+            window.open(waUrl, '_blank');
+        }
+
+        function restartGame() {
+            playClickSound();
+            clearSavedGame();
+            document.getElementById('student-name').value = '';
+            showScreen('start');
+        }
+
+        function goHome() {
+            playClickSound();
+            showScreen('start');
+        }
+
+        function toggleSound() {
+            gameState.soundEnabled = !gameState.soundEnabled;
+            const btn = document.getElementById('btn-sound-toggle');
+            if (gameState.soundEnabled) {
+                btn.innerHTML = '<i class="fa-solid fa-volume-up"></i>';
+                btn.classList.remove('text-red-300');
+                playClickSound();
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+                btn.classList.add('text-red-300');
+                if(synth.speaking) synth.cancel();
+            }
+        }
+
+        
+        // --- EVENT LISTENERS ---
+        document.getElementById('btn-home').addEventListener('click', goHome);
+        document.getElementById('btn-start').addEventListener('click', startGame);
+        document.getElementById('btn-reset').addEventListener('click', resetLetters);
+        document.getElementById('btn-hint').addEventListener('click', useHint);
+        document.getElementById('btn-check').addEventListener('click', checkAnswer);
+        document.getElementById('btn-listen').addEventListener('click', () => {
+            playClickSound();
+            speak(gameState.currentWord);
+        });
+        document.getElementById('btn-next').addEventListener('click', nextQuestion);
+        document.getElementById('btn-whatsapp').addEventListener('click', sendToWhatsApp);
+        document.getElementById('btn-restart').addEventListener('click', restartGame);
+        document.getElementById('btn-sound-toggle').addEventListener('click', toggleSound);
+        
+        // Enter key pada input nama untuk start
+        document.getElementById('student-name').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') startGame();
+            document.getElementById('name-error').classList.add('hide'); // sembunyikan error saat ngetik
+        });
+        
+        // Auto load check on startup untuk mencegah kehilangan progres jika halaman di-refresh
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('azZahraGameState');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (!parsed.endTime && parsed.studentName) {
+                        document.getElementById('student-name').value = parsed.studentName;
+                        const nameContainer = document.getElementById('name-error').parentElement;
+                        let infoEl = document.getElementById('resume-info');
+                        if (!infoEl) {
+                            infoEl = document.createElement('p');
+                            infoEl.id = 'resume-info';
+                            infoEl.className = 'text-blue-600 font-bold mt-3 animate-pop';
+                            nameContainer.appendChild(infoEl);
+                        }
+                        infoEl.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Data permainan sebelumnya ditemukan! Tekan Mulai untuk melanjutkan.';
+                    }
+                } catch(e) {}
+            }
+        });
+        
+    </script>
+</body>
+</html>
